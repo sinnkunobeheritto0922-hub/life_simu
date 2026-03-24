@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>生活費の目安シミュレーター（貯金額から逆算）</title>
+  <title>生活費の目安シミュレーター（万円入力版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -93,14 +93,14 @@
 </head>
 <body>
   <div class="tool-container">
-    <h1>💰 生活費の目安シミュレーター（貯金額から逆算）</h1>
+    <h1>💰 生活費の目安シミュレーター（万円入力版）</h1>
     <p class="desc">
-      手取りと「目標貯金額」から、生活費の目安と内訳を自動で算出します。
+      手取りと「目標貯金額」から、生活費の目安と内訳を自動で算出します。（単位：万円）
     </p>
 
     <div class="field">
-      <label for="takeHome">手取り額（円）</label>
-      <input id="takeHome" type="number" min="0" placeholder="例：230000" />
+      <label for="takeHome">手取り額（万円）</label>
+      <input id="takeHome" type="number" min="0" placeholder="例：23" />
     </div>
 
     <div class="field">
@@ -115,8 +115,8 @@
     </div>
 
     <div class="field">
-      <label for="targetSaving">目標貯金額（円）</label>
-      <input id="targetSaving" type="number" min="0" placeholder="例：50000" />
+      <label for="targetSaving">目標貯金額（万円）</label>
+      <input id="targetSaving" type="number" min="0" placeholder="例：5" />
     </div>
 
     <div class="btn-area">
@@ -126,21 +126,20 @@
     <div id="result" class="result-block" style="display:none;">
       <h2>📘 結果</h2>
       <div class="result-line">
-        【生活費として使える上限】：
-        <span id="livingMax" class="highlight"></span> 円
+        【生活費として使える上限】：<span id="livingMax" class="highlight"></span> 万円
       </div>
 
       <h2>【生活費の内訳（目安）】</h2>
-      <div class="result-line">家賃　　　：<span id="rent"></span> 円</div>
-      <div class="result-line">食費　　　：<span id="food"></span> 円</div>
-      <div class="result-line">光熱費　　：<span id="utility"></span> 円</div>
-      <div class="result-line">通信費　　：<span id="comm"></span> 円</div>
-      <div class="result-line">保険　　　：<span id="ins"></span> 円</div>
-      <div class="result-line">車関連　　：<span id="car"></span> 円</div>
-      <div class="result-line">教育費　　：<span id="edu"></span> 円</div>
-      <div class="result-line">その他　　：<span id="other"></span> 円</div>
+      <div class="result-line">家賃　　　：<span id="rent"></span> 万円</div>
+      <div class="result-line">食費　　　：<span id="food"></span> 万円</div>
+      <div class="result-line">光熱費　　：<span id="utility"></span> 万円</div>
+      <div class="result-line">通信費　　：<span id="comm"></span> 万円</div>
+      <div class="result-line">保険　　　：<span id="ins"></span> 万円</div>
+      <div class="result-line">車関連　　：<span id="car"></span> 万円</div>
+      <div class="result-line">教育費　　：<span id="edu"></span> 万円</div>
+      <div class="result-line">その他　　：<span id="other"></span> 万円</div>
 
-      <h2>📊 手取りの内訳（円グラフ）</h2>
+      <h2>📊 手取りの内訳（円グラフ・単位：万円）</h2>
       <canvas id="pieChart"></canvas>
 
       <p class="note">
@@ -149,10 +148,8 @@
     </div>
   </div>
 
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    // 家族構成ごとの生活費配分（必要なら後で細かく変えられる）
     const ratioByFamily = {
       single:   { rent: 0.30, food: 0.20, utility: 0.07, comm: 0.05, ins: 0.05, car: 0.10, edu: 0.00, other: 0.23 },
       couple:   { rent: 0.30, food: 0.20, utility: 0.07, comm: 0.05, ins: 0.05, car: 0.10, edu: 0.05, other: 0.18 },
@@ -161,38 +158,26 @@
       couple3:  { rent: 0.30, food: 0.20, utility: 0.07, comm: 0.05, ins: 0.05, car: 0.10, edu: 0.14, other: 0.09 }
     };
 
-    const takeHomeInput   = document.getElementById('takeHome');
-    const familyTypeInput = document.getElementById('familyType');
-    const targetSavingInput = document.getElementById('targetSaving');
-    const resultBlock = document.getElementById('result');
-
-    const livingMaxSpan = document.getElementById('livingMax');
-    const rentSpan = document.getElementById('rent');
-    const foodSpan = document.getElementById('food');
-    const utilitySpan = document.getElementById('utility');
-    const commSpan = document.getElementById('comm');
-    const insSpan = document.getElementById('ins');
-    const carSpan = document.getElementById('car');
-    const eduSpan = document.getElementById('edu');
-    const otherSpan = document.getElementById('other');
-
     let pieChart = null;
 
-    function formatYen(value) {
-      return Math.round(value).toLocaleString('ja-JP');
+    function toMan(value) {
+      return (value / 10000).toFixed(1);
     }
 
     document.getElementById('calcBtn').addEventListener('click', () => {
-      const takeHome = Number(takeHomeInput.value);
-      const targetSaving = Number(targetSavingInput.value);
-      const familyType = familyTypeInput.value;
+      const takeHomeMan = Number(document.getElementById('takeHome').value);
+      const targetSavingMan = Number(document.getElementById('targetSaving').value);
+      const familyType = document.getElementById('familyType').value;
 
-      if (!takeHome || !targetSaving || targetSaving > takeHome) {
+      if (!takeHomeMan || !targetSavingMan || targetSavingMan > takeHomeMan) {
         alert('手取り額と目標貯金額を正しく入力してください（貯金額は手取り以下）。');
         return;
       }
 
+      const takeHome = takeHomeMan * 10000;
+      const targetSaving = targetSavingMan * 10000;
       const livingMax = takeHome - targetSaving;
+
       const ratio = ratioByFamily[familyType];
 
       const rent   = livingMax * ratio.rent;
@@ -204,31 +189,29 @@
       const edu    = livingMax * ratio.edu;
       const other  = livingMax * ratio.other;
 
-      livingMaxSpan.textContent = formatYen(livingMax);
-      rentSpan.textContent      = formatYen(rent);
-      foodSpan.textContent      = formatYen(food);
-      utilitySpan.textContent   = formatYen(util);
-      commSpan.textContent      = formatYen(comm);
-      insSpan.textContent       = formatYen(ins);
-      carSpan.textContent       = formatYen(car);
-      eduSpan.textContent       = formatYen(edu);
-      otherSpan.textContent     = formatYen(other);
+      document.getElementById('livingMax').textContent = toMan(livingMax);
+      document.getElementById('rent').textContent      = toMan(rent);
+      document.getElementById('food').textContent      = toMan(food);
+      document.getElementById('utility').textContent   = toMan(util);
+      document.getElementById('comm').textContent      = toMan(comm);
+      document.getElementById('ins').textContent       = toMan(ins);
+      document.getElementById('car').textContent       = toMan(car);
+      document.getElementById('edu').textContent       = toMan(edu);
+      document.getElementById('other').textContent     = toMan(other);
 
-      // 円グラフ用データ（手取り全体の内訳）
       const labels = [
-        '家賃', '食費', '光熱費', '通信費', '保険',
-        '車関連', '教育費', 'その他', '貯金'
+        '家賃（万円）', '食費（万円）', '光熱費（万円）', '通信費（万円）', '保険（万円）',
+        '車関連（万円）', '教育費（万円）', 'その他（万円）', '貯金（万円）'
       ];
+
       const data = [
-        rent, food, util, comm, ins,
-        car, edu, other, targetSaving
+        rent / 10000, food / 10000, util / 10000, comm / 10000, ins / 10000,
+        car / 10000, edu / 10000, other / 10000, targetSaving / 10000
       ];
 
       const ctx = document.getElementById('pieChart').getContext('2d');
 
-      if (pieChart) {
-        pieChart.destroy();
-      }
+      if (pieChart) pieChart.destroy();
 
       pieChart = new Chart(ctx, {
         type: 'pie',
@@ -252,7 +235,7 @@
         }
       });
 
-      resultBlock.style.display = 'block';
+      document.getElementById('result').style.display = 'block';
     });
   </script>
 </body>
